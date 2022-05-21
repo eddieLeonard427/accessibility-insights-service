@@ -3,7 +3,7 @@
 
 import 'reflect-metadata';
 
-import { exponentialBackOff } from './exponential-backoff';
+import { exponentialBackOff, backOffOptions } from './exponential-backoff';
 
 let fn: () => Promise<boolean>;
 
@@ -18,9 +18,29 @@ describe(exponentialBackOff, () => {
         const numOfAttempts = 5;
         fn = jest.fn().mockImplementation(async () => Promise.reject('error'));
         try {
-            await exponentialBackOff(fn, { startingDelay: 10, numOfAttempts });
+            await exponentialBackOff(fn, { ...backOffOptions, startingDelay: 10, numOfAttempts });
             // eslint-disable-next-line no-empty
         } catch {}
         expect(fn).toBeCalledTimes(numOfAttempts);
+    });
+
+    it('invoke with retry based on HTTP status code', async () => {
+        const numOfAttempts = 5;
+        fn = jest.fn().mockImplementation(async () => Promise.reject({ statusCode: 429 }));
+        try {
+            await exponentialBackOff(fn, { ...backOffOptions, startingDelay: 10, numOfAttempts });
+            // eslint-disable-next-line no-empty
+        } catch {}
+        expect(fn).toBeCalledTimes(numOfAttempts);
+    });
+
+    it('invoke without retry based on HTTP status code', async () => {
+        const numOfAttempts = 5;
+        fn = jest.fn().mockImplementation(async () => Promise.reject({ statusCode: 400 }));
+        try {
+            await exponentialBackOff(fn, { ...backOffOptions, startingDelay: 10, numOfAttempts });
+            // eslint-disable-next-line no-empty
+        } catch {}
+        expect(fn).toBeCalledTimes(1);
     });
 });
