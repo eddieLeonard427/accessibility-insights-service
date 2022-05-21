@@ -13,7 +13,14 @@ import { CosmosOperationResponse } from './cosmos-operation-response';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export declare type CosmosOperation = 'upsertItem' | 'upsertItems' | 'readAllItems' | 'queryItems' | 'readItem' | 'deleteItem';
+export declare type CosmosOperation =
+    | 'upsertItem'
+    | 'upsertItems'
+    | 'readAllItems'
+    | 'queryItems'
+    | 'readItem'
+    | 'deleteItem'
+    | 'transactionalBatch';
 
 @injectable()
 export class CosmosClientWrapper {
@@ -25,6 +32,33 @@ export class CosmosClientWrapper {
         @inject(iocTypeNames.CosmosClientProvider) private readonly cosmosClientProvider: CosmosClientProvider,
         @inject(ContextAwareLogger) private readonly logger: ContextAwareLogger,
     ) {}
+
+    public async transactionalBatch<T>(
+        operations: cosmos.OperationInput[],
+        dbName: string,
+        collectionName: string,
+        partitionKey: string,
+        throwIfNotSuccess: boolean = true,
+    ): Promise<CosmosOperationResponse<T>> {
+        const container = await this.getContainer(dbName, collectionName);
+        try {
+            const response = await container.items.batch(operations, partitionKey);
+
+            return {
+                response: response.result,
+                statusCode: response.code,
+            };
+        } catch (error) {
+            this.logFailedResponse('transactionalBatch', error, {
+                db: dbName,
+                collection: collectionName,
+                partitionKey: partitionKey,
+                operations: JSON.stringify(operations),
+            });
+
+            return this.handleFailedOperationResponse('transactionalBatch', error, throwIfNotSuccess);
+        }
+    }
 
     public async upsertItems<T extends CosmosDocument>(
         items: T[],

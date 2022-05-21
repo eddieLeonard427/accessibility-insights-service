@@ -4,7 +4,7 @@
 import * as util from 'util';
 import * as cosmos from '@azure/cosmos';
 import { System } from 'common';
-import _ from 'lodash';
+import { mergeWith, mapValues, isPlainObject } from 'lodash';
 import { Logger } from 'logger';
 import { VError } from 'verror';
 import pLimit from 'p-limit';
@@ -16,6 +16,8 @@ import { RetryOptions } from './retry-options';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+export declare type OperationInput = cosmos.OperationInput;
+
 export class CosmosContainerClient {
     public maxConcurrencyLimit = 10;
 
@@ -26,6 +28,20 @@ export class CosmosContainerClient {
         private readonly logger: Logger,
         private readonly systemUtils: typeof System = System,
     ) {}
+
+    public async transactionalBatch<T>(
+        operations: OperationInput[],
+        partitionKey: string,
+        throwIfNotSuccess: boolean = true,
+    ): Promise<CosmosOperationResponse<T>> {
+        return this.cosmosClientWrapper.transactionalBatch<T>(
+            operations,
+            this.dbName,
+            this.collectionName,
+            partitionKey,
+            throwIfNotSuccess,
+        );
+    }
 
     public async readDocument<T>(
         documentId: string,
@@ -111,7 +127,7 @@ export class CosmosContainerClient {
         }
 
         const mergedDocument = response.item;
-        _.mergeWith(mergedDocument, document, (target: T, source: T, key) => {
+        mergeWith(mergedDocument, document, (target: T, source: T, key) => {
             // preserve the storage document _etag value
             if (key === '_etag') {
                 return target;
@@ -234,8 +250,8 @@ export class CosmosContainerClient {
     }
 
     private getNormalizeMergedDocument(document: any): any {
-        return _.mapValues(document, (value) => {
-            if (_.isPlainObject(value)) {
+        return mapValues(document, (value) => {
+            if (isPlainObject(value)) {
                 return this.getNormalizeMergedDocument(value);
             }
 

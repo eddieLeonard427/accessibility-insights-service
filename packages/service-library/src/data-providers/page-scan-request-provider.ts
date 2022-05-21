@@ -40,8 +40,8 @@ export class PageScanRequestProvider {
         return this.cosmosContainerClient.queryDocuments<OnDemandPageScanRequest>(query, continuationToken);
     }
 
-    public async insertRequests(requests: OnDemandPageScanRequest[]): Promise<void> {
-        return this.cosmosContainerClient.writeDocuments(requests, PartitionKey.pageScanRequestDocuments);
+    public async writeRequest(request: OnDemandPageScanRequest): Promise<CosmosOperationResponse<OnDemandPageScanRequest>> {
+        return this.cosmosContainerClient.writeDocument(request, undefined, false);
     }
 
     public async deleteRequests(ids: string[]): Promise<void> {

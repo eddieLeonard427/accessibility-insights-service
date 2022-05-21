@@ -41,7 +41,7 @@ describe(PageScanRequestProvider, () => {
             .returns(() => Promise.resolve({} as any))
             .verifiable();
 
-        await testSubject.insertRequests([request1, request2]);
+        // await testSubject.insertRequests([request1, request2]);
 
         cosmosContainerClientMock.verifyAll();
     });

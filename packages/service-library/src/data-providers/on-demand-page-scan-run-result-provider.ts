@@ -4,7 +4,7 @@
 import { inject, injectable } from 'inversify';
 import { client, CosmosContainerClient, cosmosContainerClientTypes, CosmosOperationResponse } from 'azure-services';
 import { flatMap, groupBy } from 'lodash';
-import { ItemType, OnDemandPageScanResult } from 'storage-documents';
+import { ItemType, OnDemandPageScanResult, OnDemandPageScanRequest } from 'storage-documents';
 import * as cosmos from '@azure/cosmos';
 import pLimit from 'p-limit';
 import { GlobalLogger } from 'logger';
@@ -118,6 +118,7 @@ export class OnDemandPageScanRunResultProvider {
      * @param scanRuns Page scan results to write to a storage
      */
     public async writeScanRuns(scanRuns: OnDemandPageScanResult[]): Promise<void> {
+        // TODO remove
         const scanRunsByPartition = groupBy(scanRuns, (scanRun) => {
             this.setSystemProperties(scanRun);
 
@@ -132,6 +133,29 @@ export class OnDemandPageScanRunResultProvider {
         );
     }
 
+    public async writeScanRun(scanRun: OnDemandPageScanResult): Promise<CosmosOperationResponse<OnDemandPageScanResult>> {
+        return this.cosmosContainerClient.writeDocument(scanRun, undefined, false);
+    }
+
+    public async readAllScanRunsForBatch(batchId: string): Promise<Partial<OnDemandPageScanRequest>[]> {
+        const pageScanResults: Partial<OnDemandPageScanRequest>[] = [];
+        let continuationToken: string;
+        do {
+            const response: CosmosOperationResponse<Partial<OnDemandPageScanRequest>[]> = await this.readScanRunsForBatch(
+                batchId,
+                continuationToken,
+            );
+            client.ensureSuccessStatusCode(response);
+
+            continuationToken = response.continuationToken;
+            if (response.item?.length > 0) {
+                pageScanResults.push(...response.item);
+            }
+        } while (continuationToken !== undefined);
+
+        return pageScanResults;
+    }
+
     private async updateScanRunImpl(
         pageScanResult: Partial<OnDemandPageScanResult>,
         throwIfNotSuccess: boolean,
@@ -143,6 +167,27 @@ export class OnDemandPageScanRunResultProvider {
         this.setSystemProperties(persistedResult);
 
         return this.cosmosContainerClient.mergeOrWriteDocument(persistedResult, undefined, throwIfNotSuccess);
+    }
+
+    private async readScanRunsForBatch(
+        batchId: string,
+        continuationToken?: string,
+    ): Promise<CosmosOperationResponse<Partial<OnDemandPageScanRequest>[]>> {
+        const query = {
+            query: 'SELECT c.id, c.batchRequestId, c.url FROM c WHERE c.batchRequestId = @batchId AND c.itemType = @itemType',
+            parameters: [
+                {
+                    name: '@itemType',
+                    value: ItemType.onDemandPageScanRunResult,
+                },
+                {
+                    name: '@batchId',
+                    value: batchId,
+                },
+            ],
+        };
+
+        return this.cosmosContainerClient.queryDocuments<Partial<OnDemandPageScanRequest>>(query, continuationToken);
     }
 
     private getQuery(scanIds: string[], partitionKey: string): cosmos.SqlQuerySpec {

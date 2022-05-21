@@ -8,10 +8,11 @@ import { WebsiteRequest, ReportGroupRequest, PrivacyScan } from './on-demand-pag
 export interface OnDemandPageScanRequest extends StorageDocument {
     itemType: ItemType.onDemandPageScanRequest;
     url: string;
+    batchRequestId?: string;
     site?: WebsiteRequest;
     priority: number;
-    reportGroups?: ReportGroupRequest[];
-    scanNotifyUrl?: string;
     deepScan?: boolean;
+    reportGroups?: ReportGroupRequest[];
     privacyScan?: PrivacyScan;
+    scanNotifyUrl?: string;
 }

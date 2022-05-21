@@ -80,7 +80,8 @@ export class ScanFeedGenerator {
         websiteScanResult: WebsiteScanResult,
         pageScanResult: OnDemandPageScanResult,
     ): Promise<ScanRunBatchRequest[]> {
-        const batchId = this.guidGenerator.createGuid();
+        // use initial batch id to connect new scan requests within pipeline
+        const batchId = pageScanResult.batchRequestId;
         const scanRequests = this.createScanRequests(batchId, urls, pageScanResult, websiteScanResult);
         await this.scanDataProvider.writeScanRunBatchRequest(batchId, scanRequests);
 
