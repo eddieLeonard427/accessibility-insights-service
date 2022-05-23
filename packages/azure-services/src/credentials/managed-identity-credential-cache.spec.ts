@@ -8,6 +8,7 @@ import { IMock, Mock, Times } from 'typemoq';
 import { Mutex } from 'async-mutex';
 import { ManagedIdentityCredential, AccessToken } from '@azure/identity';
 import * as MockDate from 'mockdate';
+import { exponentialBackOff } from 'common';
 import { ManagedIdentityCredentialCache } from './managed-identity-credential-cache';
 
 const scopes = 'https://vault.azure.net/default';
@@ -21,6 +22,7 @@ let managedIdentityCredentialMock: IMock<ManagedIdentityCredential>;
 let azureManagedCredential: ManagedIdentityCredentialCache;
 let accessToken: AccessToken;
 let dateNow: Date;
+let exponentialRetry: typeof exponentialBackOff;
 
 describe(ManagedIdentityCredentialCache, () => {
     beforeEach(() => {
@@ -31,17 +33,16 @@ describe(ManagedIdentityCredentialCache, () => {
 
         tokenCacheMock = Mock.ofType<NodeCache>();
         managedIdentityCredentialMock = Mock.ofType<ManagedIdentityCredential>();
+        exponentialRetry = jest.fn().mockImplementation(async (fn) => {
+            return fn();
+        });
+
         azureManagedCredential = new ManagedIdentityCredentialCache(
             managedIdentityCredentialMock.object,
             tokenCacheMock.object,
             new Mutex(),
+            exponentialRetry,
         );
-        azureManagedCredential.backOffOptions = {
-            delayFirstAttempt: false,
-            numOfAttempts: 2,
-            maxDelay: 10,
-            startingDelay: 0,
-        };
     });
 
     afterEach(() => {
@@ -67,6 +68,7 @@ describe(ManagedIdentityCredentialCache, () => {
         const actualAccessToken = await azureManagedCredential.getToken(scopes, accessTokenOptions);
 
         expect(actualAccessToken).toEqual(accessToken);
+        expect(exponentialRetry).toBeCalled();
     });
 
     it('get token from a service on token expiration', async () => {
@@ -87,6 +89,7 @@ describe(ManagedIdentityCredentialCache, () => {
         const actualAccessToken = await azureManagedCredential.getToken(scopes, accessTokenOptions);
 
         expect(actualAccessToken).toEqual(accessToken);
+        expect(exponentialRetry).toBeCalled();
     });
 
     it('get token from a cache', async () => {
@@ -116,10 +119,11 @@ describe(ManagedIdentityCredentialCache, () => {
         managedIdentityCredentialMock
             .setup((o) => o.getToken(scopes, accessTokenOptions))
             .returns(() => Promise.reject(new Error('msi service error')))
-            .verifiable(Times.exactly(2));
+            .verifiable();
 
         await expect(azureManagedCredential.getToken(scopes, accessTokenOptions)).rejects.toThrowError(
             /MSI credential provider has failed./,
         );
+        expect(exponentialRetry).toBeCalled();
     });
 });
