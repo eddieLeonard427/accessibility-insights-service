@@ -54,15 +54,23 @@ export namespace System {
         }
 
         const getRequest = (request: any) => {
-            const { headers, body, operationSpec, ...requestCopy } = request;
+            if (request.headers || request.body || request.operationSpec) {
+                const { headers, body, operationSpec, ...requestCopy } = request;
 
-            return requestCopy;
+                return requestCopy;
+            } else {
+                return request;
+            }
         };
 
         const getResponse = (response: any) => {
-            const { headers, request, ...responseCopy } = response;
+            if (response.headers || response.request) {
+                const { headers, request, ...responseCopy } = response;
 
-            return responseCopy;
+                return responseCopy;
+            } else {
+                return response;
+            }
         };
 
         const { request, response, ...httpResponseCopy } = httpResponse;

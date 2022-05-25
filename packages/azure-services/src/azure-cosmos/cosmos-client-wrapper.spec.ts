@@ -58,7 +58,7 @@ describe('CosmosClientWrapper', () => {
             verifyMocks();
 
             await expect(testSubject.readAllItem(dbName, collectionName)).rejects.toThrowError(
-                `The Cosmos DB 'readAllItems' operation failed. Response status code: 404 Response: NotFound`,
+                `The Cosmos DB readAllItems operation failed.`,
             );
         });
 
@@ -113,7 +113,7 @@ describe('CosmosClientWrapper', () => {
             verifyMocks();
 
             await expect(testSubject.readItem('id', dbName, collectionName, partitionKey)).rejects.toThrowError(
-                `The Cosmos DB 'readItem' operation failed. Document Id: id Response status code: 404 Response: NotFound`,
+                `The Cosmos DB readItem operation failed.`,
             );
         });
 
@@ -186,7 +186,7 @@ describe('CosmosClientWrapper', () => {
             verifyMocks();
 
             await expect(testSubject.readItems(dbName, collectionName, 'query')).rejects.toThrowError(
-                `The Cosmos DB 'queryItems' operation failed. Response status code: 404 Response: NotFound`,
+                `The Cosmos DB queryItems operation failed.`,
             );
         });
 
@@ -313,7 +313,7 @@ describe('CosmosClientWrapper', () => {
             verifyMocks();
 
             await expect(testSubject.deleteItem('id', dbName, collectionName, partitionKey)).rejects.toThrowError(
-                `The Cosmos DB 'deleteItem' operation failed. Document Id: id Response status code: 500 Response: undefined`,
+                `The Cosmos DB deleteItem operation failed.`,
             );
         });
 
@@ -365,7 +365,7 @@ describe('CosmosClientWrapper', () => {
             verifyMocks();
 
             await expect(testSubject.upsertItem<DbItemMock>(item, dbName, collectionName, partitionKey)).rejects.toThrowError(
-                `The Cosmos DB 'upsertItem' operation failed. Document Id: id-1 Response status code: 412 Response: PreconditionFailed`,
+                `The Cosmos DB upsertItem operation failed.`,
             );
         });
 
@@ -594,7 +594,7 @@ describe('CosmosClientWrapper', () => {
             setupVerifiableUpsertItemCallWithOptions(items[0], options);
             itemsMock.setup(async (i) => i.upsert(items[1], options)).returns(async () => Promise.reject(errorResponse));
 
-            loggerMock.setup((o) => o.logError(`The Cosmos DB 'upsertItems' operation failed.`, It.isAny())).verifiable();
+            loggerMock.setup((o) => o.logError(`The Cosmos DB upsertItems operation failed.`, It.isAny())).verifiable();
 
             await expect(testSubject.upsertItems(items, dbName, collectionName, partitionKey)).rejects.toThrowError(``);
             verifyMocks();

@@ -134,7 +134,7 @@ export class OnDemandPageScanRunResultProvider {
     }
 
     public async writeScanRun(scanRun: OnDemandPageScanResult): Promise<CosmosOperationResponse<OnDemandPageScanResult>> {
-        return this.cosmosContainerClient.writeDocument(scanRun, undefined, false);
+        return this.cosmosContainerClient.writeDocument(scanRun);
     }
 
     public async readAllScanRunsForBatch(batchId: string): Promise<Partial<OnDemandPageScanRequest>[]> {

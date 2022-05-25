@@ -10,17 +10,11 @@ import { CosmosClientProvider, iocTypeNames } from '../ioc-types';
 import { client } from '../storage/client';
 import { CosmosDocument } from './cosmos-document';
 import { CosmosOperationResponse } from './cosmos-operation-response';
+import { CosmosError } from './cosmos-error';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export declare type CosmosOperation =
-    | 'upsertItem'
-    | 'upsertItems'
-    | 'readAllItems'
-    | 'queryItems'
-    | 'readItem'
-    | 'deleteItem'
-    | 'transactionalBatch';
+export declare type CosmosOperation = 'upsertItem' | 'upsertItems' | 'readAllItems' | 'queryItems' | 'readItem' | 'deleteItem';
 
 @injectable()
 export class CosmosClientWrapper {
@@ -32,33 +26,6 @@ export class CosmosClientWrapper {
         @inject(iocTypeNames.CosmosClientProvider) private readonly cosmosClientProvider: CosmosClientProvider,
         @inject(ContextAwareLogger) private readonly logger: ContextAwareLogger,
     ) {}
-
-    public async transactionalBatch<T>(
-        operations: cosmos.OperationInput[],
-        dbName: string,
-        collectionName: string,
-        partitionKey: string,
-        throwIfNotSuccess: boolean = true,
-    ): Promise<CosmosOperationResponse<T>> {
-        const container = await this.getContainer(dbName, collectionName);
-        try {
-            const response = await container.items.batch(operations, partitionKey);
-
-            return {
-                response: response.result,
-                statusCode: response.code,
-            };
-        } catch (error) {
-            this.logFailedResponse('transactionalBatch', error, {
-                db: dbName,
-                collection: collectionName,
-                partitionKey: partitionKey,
-                operations: JSON.stringify(operations),
-            });
-
-            return this.handleFailedOperationResponse('transactionalBatch', error, throwIfNotSuccess);
-        }
-    }
 
     public async upsertItems<T extends CosmosDocument>(
         items: T[],
@@ -315,15 +282,15 @@ export class CosmosClientWrapper {
 
     private throwIfNotSuccess(operation: CosmosOperation, operationResponse: CosmosOperationResponse<unknown>, id?: string): void {
         if (!client.isSuccessStatusCode(operationResponse)) {
-            if (id === undefined) {
-                throw new Error(
-                    `The Cosmos DB '${operation}' operation failed. Response status code: ${operationResponse.statusCode} Response: ${operationResponse.response}`,
-                );
-            } else {
-                throw new Error(
-                    `The Cosmos DB '${operation}' operation failed. Document Id: ${id} Response status code: ${operationResponse.statusCode} Response: ${operationResponse.response}`,
-                );
-            }
+            throw new CosmosError(
+                `The Cosmos DB ${operation} operation failed.`,
+                operation,
+                operationResponse.statusCode,
+                operationResponse.response === undefined || typeof operationResponse.response === 'string'
+                    ? operationResponse.response
+                    : JSON.stringify(operationResponse.response),
+                id,
+            );
         }
     }
 
@@ -336,9 +303,12 @@ export class CosmosClientWrapper {
     ): void {
         const errorResponse = client.getErrorResponse(error);
         if (errorResponse !== undefined) {
-            this.logger.logError(`The Cosmos DB '${operation}' operation failed.`, {
-                statusCode: errorResponse.statusCode.toString(),
-                response: errorResponse.response === undefined ? 'undefined' : errorResponse.response.toString(),
+            this.logger.logError(`The Cosmos DB ${operation} operation failed.`, {
+                statusCode: `${errorResponse.statusCode}`,
+                response:
+                    errorResponse.response === undefined || typeof errorResponse.response === 'string'
+                        ? errorResponse.response
+                        : JSON.stringify(errorResponse.response),
                 ...properties,
             });
         }

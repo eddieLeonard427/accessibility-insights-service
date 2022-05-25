@@ -41,7 +41,7 @@ export class PageScanRequestProvider {
     }
 
     public async writeRequest(request: OnDemandPageScanRequest): Promise<CosmosOperationResponse<OnDemandPageScanRequest>> {
-        return this.cosmosContainerClient.writeDocument(request, undefined, false);
+        return this.cosmosContainerClient.writeDocument(request);
     }
 
     public async deleteRequests(ids: string[]): Promise<void> {

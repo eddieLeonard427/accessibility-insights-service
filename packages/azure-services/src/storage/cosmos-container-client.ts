@@ -16,8 +16,6 @@ import { RetryOptions } from './retry-options';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export declare type OperationInput = cosmos.OperationInput;
-
 export class CosmosContainerClient {
     public maxConcurrencyLimit = 10;
 
@@ -28,20 +26,6 @@ export class CosmosContainerClient {
         private readonly logger: Logger,
         private readonly systemUtils: typeof System = System,
     ) {}
-
-    public async transactionalBatch<T>(
-        operations: OperationInput[],
-        partitionKey: string,
-        throwIfNotSuccess: boolean = true,
-    ): Promise<CosmosOperationResponse<T>> {
-        return this.cosmosClientWrapper.transactionalBatch<T>(
-            operations,
-            this.dbName,
-            this.collectionName,
-            partitionKey,
-            throwIfNotSuccess,
-        );
-    }
 
     public async readDocument<T>(
         documentId: string,
