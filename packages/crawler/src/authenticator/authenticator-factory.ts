@@ -4,6 +4,7 @@
 import { injectable } from 'inversify';
 import { Authenticator } from './authenticator';
 import { AzureActiveDirectoryAuthentication } from './azure-active-directory-authenticator';
+import { DatacenterSecurityTokenServiceAuthentication } from './datacenter-security-token-service';
 
 @injectable()
 export class AuthenticatorFactory {
@@ -11,6 +12,8 @@ export class AuthenticatorFactory {
         switch (authType) {
             case 'AAD':
                 return new Authenticator(new AzureActiveDirectoryAuthentication(accountName, accountPassword));
+            case 'dSTS':
+                return new Authenticator(new DatacenterSecurityTokenServiceAuthentication(accountName, accountPassword));
             default:
                 throw new Error(`Unknown auth type: ${authType}, please provide a valid authType input.`);
         }
