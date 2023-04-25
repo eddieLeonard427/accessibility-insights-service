@@ -99,6 +99,9 @@
     "overrides": {
         "apify": {
             "puppeteer": "$puppeteer"
+        },
+        "@axe-core/puppeteer": {
+            "puppeteer": "$puppeteer"
         }
     },
     "bin": {
